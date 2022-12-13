@@ -1,4 +1,4 @@
-
+#include <Uduino.h>
 #include<Uduino_Wifi.h>
 #include <MD_Parola.h>
 #include <MD_MAX72xx.h>
@@ -11,7 +11,6 @@
 
 MD_Parola Display = MD_Parola(HARDWARE_TYPE, CS_PIN, MAX_DEVICES);
 Uduino_Wifi uduino("uduinoBoard"); // Declare and name your object
-
 
 
 //char * dupaText="Staly Tekst";
@@ -34,23 +33,32 @@ int scrollSpeed = 100;
 int partySpeed = 500;
 bool isAnim = false;
 
+//Connect TX pin of the HC-05 to RX pin of the Arduino
+//Connect RX pin of the HC-05 to TX pin of the Arduino
+//You can use SoftwareSerial Library, but i dont recommend it for fast and long data transmission
+//Otherwise you have to check Serial.available() > excepted number of bytes sent before reading the message
+//There's no problem with hardware serial that comes with the arduino. It's perfect
+//
+#include "BluetoothSerial.h"
 
-// Servo
-#if defined(ESP32)
-// Install esp32servo library => Sketch>Include Library>Manager Libraries>Esp32Servo
-#include <ESP32Servo.h>
-#else
-#include <Servo.h>
+#if !defined(CONFIG_BT_ENABLED) || !defined(CONFIG_BLUEDROID_ENABLED)
+#error Bluetooth is not enabled! Please run `make menuconfig` to and enable it
 #endif
 
-#define MAXSERVOS 8
+#if !defined(CONFIG_BT_SPP_ENABLED)
+#error Serial Bluetooth not available or not enabled. It is only available for the ESP32 chip.
+#endif
 
-void setup()
+BluetoothSerial SerialBT;
+
+  void setup()
 {
   Display.begin();
-  Display.setIntensity(15);
+  Display.setIntensity(5);
   Display.displayClear();
   Serial.begin(9600);
+  SerialBT.begin("ESP32 Badge");
+  Serial.println("The device started, now you can pair it with bluetooth!");
 #if defined (__AVR_ATmega32U4__) // Leonardo
   while (!Serial) {}
 #elif defined(__PIC32MX__)
@@ -61,7 +69,7 @@ void setup()
   uduino.setPort(4222);   // default 4222
   //uduino.connectWifi("eduram", "zarazcipodam");
   //uduino.connectWifi("5G-Vectra-WiFi-16B63C", "bsh7nrhq4h0g2edo");
-  uduino.connectWifi("HONOR 9X", "adx7uh98io");
+  uduino.connectWifi("Bogdan", "mjku9075");
 
   uduino.addCommand("s", SetMode);
   uduino.addCommand("d", WritePinDigital);
@@ -84,8 +92,6 @@ void setup()
   uduino.addCommand("lat2", LoadAnimText2);
   uduino.addCommand("lat3", LoadAnimText3);
 
-  uduino.addInitFunction(InitializeServos);
-  uduino.addDisconnectedFunction(DisconnectAllServos);
   Serial.println("Hello");
   //snprintf(dupaText,TABLEN,<IP KTOREODCZYTALEM>)
   //uduino.ge
@@ -122,10 +128,6 @@ void SetMode() {
 }
 
 void PinSetMode(int pin, int type) {
-  //TODO : vérifier que ça, ça fonctionne
-  if (type != 4)
-    DisconnectServo(pin);
-
   switch (type) {
     case 0: // Output
       pinMode(pin, OUTPUT);
@@ -138,9 +140,6 @@ void PinSetMode(int pin, int type) {
       break;
     case 3: // Input_Pullup
       pinMode(pin, INPUT_PULLUP);
-      break;
-    case 4: // Servo
-      SetupServo(pin);
       break;
   }
 }
@@ -159,12 +158,6 @@ void WritePinAnalog() {
   if (arg != NULL)
   {
     valueToWrite = atoi(arg);
-
-    if (ServoConnectedPin(pinToMap)) {
-      UpdateServo(pinToMap, valueToWrite);
-    } else {
-      analogWrite(pinToMap, valueToWrite);
-    }
   }
 }
 
@@ -221,15 +214,15 @@ void BundleReadPin() {
   }
 }
 
-int replacechar(char *str, char orig, char rep) {
-    char *ix = str;
-    int n = 0;
-    while((ix = strchr(ix, orig)) != NULL) {
-        *ix++ = rep;
-        n++;
-    }
-    return n;
-}
+// int replacechar(char *str, char orig, char rep) {
+//     char *ix = str;
+//     int n = 0;
+//     while((ix = strchr(ix, orig)) != NULL) {
+//         *ix++ = rep;
+//         n++;
+//     }
+//     return n;
+// }
 
 void LoadNewText() {
   char *arg = NULL;
@@ -258,7 +251,9 @@ void LoadNewText() {
 
 void LoadNewStaticText() {
   char *arg = NULL;
-  arg = uduino.next();
+  //arg = uduino.next();
+  arg = (char*)SerialBT.read();
+  Serial.write(arg);
   if (arg != NULL)
   {
     shouldBeStatic = false;
@@ -442,34 +437,60 @@ void SetScrollAlign() {
   }
 }
 
+// char *arg = NULL;
+//   arg = uduino.next();
+//   if (arg != NULL)
+//   {
+//     Serial.println(arg);
+//     for (size_t i = 0; i < TABLEN; i++)
+//     {
+//       if(arg[i] == '`'){
+//         arg[i] = ' ';
+//       }
+//     }
+//     strncpy(animText2,arg,TABLEN);
+//   }
+
 void loop()
 {
   uduino.update();
-  //delay(10);
-  if (Display.displayAnimate()) {
-    Display.displayReset();
-  }
   
-  if(!shouldBeStatic){
-    Display.print(staticText);
-    Display.setInvert(isInverse);
-    delay(partySpeed);
+if (Serial.available()) {
+    SerialBT.write(Serial.read());
+    // Display.print(Serial.read());
   }
+  if (SerialBT.available()) {
+    // char hub = SerialBT.read();
+    // Serial.write(hub);
+    // Display.print(hub);
+    // Display.setTextAlignment(state);
+  }
+  delay(100);
+
+  // if (Display.displayAnimate()) {
+  //   Display.displayReset();
+  // }
   
-  if(isAnim){
-    Display.print(animText1);
-    delay(partySpeed);
-    Display.print(animText2);
-    delay(partySpeed);
-    Display.print(animText3);
-    delay(partySpeed);
-  }
+  // if(!shouldBeStatic){
+  //   Display.print(staticText);
+  //   Display.setInvert(isInverse);
+  //   delay(partySpeed);
+  // }
   
-  if(isPartyMode){
-    delay(partySpeed);
-    Display.print("");
-    delay(partySpeed);
-  }
+  // if(isAnim){
+  //   Display.print(animText1);
+  //   delay(partySpeed);
+  //   Display.print(animText2);
+  //   delay(partySpeed);
+  //   Display.print(animText3);
+  //   delay(partySpeed);
+  // }
+  
+  // if(isPartyMode){
+  //   delay(partySpeed);
+  //   Display.print("");
+  //   delay(partySpeed);
+  // }
 }
 
 void printValue(int pin, int targetValue) {
@@ -478,74 +499,3 @@ void printValue(int pin, int targetValue) {
   uduino.println(targetValue);
 }
 
-
-
-/* SERVO CODE */
-Servo servos[MAXSERVOS];
-int servoPinMap[MAXSERVOS];
-
-void InitializeServos() {
-#if defined(ESP32)
-  ESP32PWM::allocateTimer(0);
-  ESP32PWM::allocateTimer(1);
-  ESP32PWM::allocateTimer(2);
-  ESP32PWM::allocateTimer(3);
-#else
-#endif
-
-  for (int i = 0; i < MAXSERVOS - 1; i++ ) {
-    servoPinMap[i] = -1;
-    servos[i].detach();
-  }
-}
-
-void SetupServo(int pin) {
-  if (ServoConnectedPin(pin))
-    return;
-
-  int nextIndex = GetAvailableIndexByPin(-1);
-  if (nextIndex == -1)
-    nextIndex = 0;
-#if defined(ESP32)
-  servos[nextIndex].setPeriodHertz(50);
-#endif
-  servos[nextIndex].attach(pin);
-
-  servoPinMap[nextIndex] = pin;
-}
-
-
-void DisconnectServo(int pin) {
-  servos[GetAvailableIndexByPin(pin)].detach();
-  servoPinMap[GetAvailableIndexByPin(pin)] = 0;
-}
-
-bool ServoConnectedPin(int pin) {
-  if (GetAvailableIndexByPin(pin) == -1) return false;
-  else return true;
-}
-
-int GetAvailableIndexByPin(int pin) {
-  for (int i = 0; i < MAXSERVOS - 1; i++ ) {
-    if (servoPinMap[i] == pin) {
-      return i;
-    } else if (pin == -1 && servoPinMap[i] < 0) {
-      return i; // return the first available index
-    }
-  }
-  return -1;
-}
-
-void UpdateServo(int pin, int targetValue) {
-  int index = GetAvailableIndexByPin(pin);
-  servos[index].write(targetValue);
-  delay(10);
-}
-
-void DisconnectAllServos() {
-  for (int i = 0; i < MAXSERVOS; i++) {
-    servos[i].detach();
-    digitalWrite(servoPinMap[i], LOW);
-    servoPinMap[i] = -1;
-  }
-}
