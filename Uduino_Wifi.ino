@@ -1,16 +1,17 @@
 #include <Uduino.h>
 #include<Uduino_Wifi.h>
-#include <MD_Parola.h>
-#include <MD_MAX72xx.h>
-#include <SPI.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_NeoMatrix.h>
+#include <Adafruit_NeoPixel.h>
+//#include <Adafruit_TFTLCD.h>
+#include <Fonts/FontsFree_Net_uni05_534pt7b.h>
+#ifndef PSTR
+ #define PSTR // Make Arduino Due happy
+#endif
 
-#define HARDWARE_TYPE MD_MAX72XX::FC16_HW
+#define PIN 12
 
-#define MAX_DEVICES 4
-#define CS_PIN 4
-
-MD_Parola Display = MD_Parola(HARDWARE_TYPE, CS_PIN, MAX_DEVICES);
-Uduino_Wifi uduino("uduinoBoard"); // Declare and name your object
+Uduino_Wifi uduino("uduinoBoard");
 
 
 //char * dupaText="Staly Tekst";
@@ -25,13 +26,14 @@ char animText3[TABLEN];
 bool shouldBeStatic = false;
 bool isInverse = false;
 bool isPartyMode = false;
-textEffect_t scrollState = PA_SCROLL_LEFT;
-textPosition_t state = PA_CENTER;
+// textEffect_t scrollState = PA_SCROLL_LEFT;
+// textPosition_t state = PA_CENTER;
 int stateVal = 0;
 
 int scrollSpeed = 100;
 int partySpeed = 500;
 bool isAnim = false;
+char defChar = '`';
 
 //Connect TX pin of the HC-05 to RX pin of the Arduino
 //Connect RX pin of the HC-05 to TX pin of the Arduino
@@ -51,14 +53,37 @@ bool isAnim = false;
 
 BluetoothSerial SerialBT;
 
-  void setup()
+Adafruit_NeoMatrix matrix = Adafruit_NeoMatrix(32, 8, PIN,
+  NEO_MATRIX_TOP     + NEO_MATRIX_LEFT +
+  NEO_MATRIX_COLUMNS + NEO_MATRIX_ZIGZAG,
+  NEO_GRB            + NEO_KHZ800);
+
+const uint16_t colors[] = {
+  matrix.Color(255, 255, 0), matrix.Color(255, 255, 0), matrix.Color(0, 0, 255) };
+
+
+
+
+void setup()
 {
-  Display.begin();
-  Display.setIntensity(5);
-  Display.displayClear();
   Serial.begin(9600);
+  SerialBT.begin(9600);
   SerialBT.begin("ESP32 Badge");
   Serial.println("The device started, now you can pair it with bluetooth!");
+  matrix.begin();
+  matrix.setTextWrap(true);
+  matrix.setBrightness(40);
+  matrix.setTextColor(colors[0]);
+  Serial.begin(9600);
+  //matrix.fillScreen(colors[0]);
+  matrix.show();
+  delay(3000);
+  matrix.clear();
+  matrix.setFont(&FontsFree_Net_uni05_534pt7b);
+  matrix.fillScreen(0);
+  matrix.setCursor(0, 4);
+  matrix.setTextColor(colors[2]);
+
 #if defined (__AVR_ATmega32U4__) // Leonardo
   while (!Serial) {}
 #elif defined(__PIC32MX__)
@@ -66,10 +91,10 @@ BluetoothSerial SerialBT;
 #endif
 
   // Optional functions,  to add BEFORE connectWifi(...)
-  uduino.setPort(4222);   // default 4222
+  //uduino.setPort(4222);   // default 4222
   //uduino.connectWifi("eduram", "zarazcipodam");
   //uduino.connectWifi("5G-Vectra-WiFi-16B63C", "bsh7nrhq4h0g2edo");
-  uduino.connectWifi("Bogdan", "mjku9075");
+  //uduino.connectWifi("Bogdan", "mjku9075");
 
   uduino.addCommand("s", SetMode);
   uduino.addCommand("d", WritePinDigital);
@@ -122,27 +147,27 @@ void SetMode() {
   arg = uduino.next();
   if (arg != NULL)
   {
-    type = atoi(arg);
-    PinSetMode(pinToMap, type);
+    //type = atoi(arg);
+    //PinSetMode(pinToMap, type);
   }
 }
 
-void PinSetMode(int pin, int type) {
-  switch (type) {
-    case 0: // Output
-      pinMode(pin, OUTPUT);
-      break;
-    case 1: // PWM
-      pinMode(pin, OUTPUT);
-      break;
-    case 2: // Analog
-      pinMode(pin, INPUT);
-      break;
-    case 3: // Input_Pullup
-      pinMode(pin, INPUT_PULLUP);
-      break;
-  }
-}
+// void PinSetMode(int pin, int type) {
+//   switch (type) {
+//     case 0: // Output
+//       pinMode(pin, OUTPUT);
+//       break;
+//     case 1: // PWM
+//       pinMode(pin, OUTPUT);
+//       break;
+//     case 2: // Analog
+//       pinMode(pin, INPUT);
+//       break;
+//     case 3: // Input_Pullup
+//       pinMode(pin, INPUT_PULLUP);
+//       break;
+//   }
+// }
 
 void WritePinAnalog() {
   int pinToMap = 100;
@@ -184,8 +209,8 @@ void ReadAnalogPin() {
   if (arg != NULL)
   {
     pinToRead = atoi(arg);
-    if (pinToRead != -1)
-      printValue(pinToRead, analogRead(pinToRead));
+    //if (pinToRead != -1)
+      //printValue(pinToRead, analogRead(pinToRead));
   }
 }
 
@@ -198,8 +223,8 @@ void ReadDigitalPin() {
     pinToRead = atoi(arg);
   }
 
-  if (pinToRead != -1)
-    printValue(pinToRead, digitalRead(pinToRead));
+  //if (pinToRead != -1)
+    //printValue(pinToRead, digitalRead(pinToRead));
 }
 
 void BundleReadPin() {
@@ -209,8 +234,8 @@ void BundleReadPin() {
   if (arg != NULL)
   {
     pinToRead = atoi(arg);
-    if (pinToRead != -1)
-      printValue(pinToRead, analogRead(pinToRead));
+    //if (pinToRead != -1)
+      //printValue(pinToRead, analogRead(pinToRead));
   }
 }
 
@@ -226,48 +251,54 @@ void BundleReadPin() {
 
 void LoadNewText() {
   char *arg = NULL;
-  arg = uduino.next();
-  if (arg != NULL)
-  {
+  //arg = uduino.next();
+  //char *arg[SerialBT.readStringUntil("`").length() + 1];// = NULL;
+  //Until('`').toCharArray(arg, SerialBT.readStringUntil('`').length() + 1);
+  
+    shouldBeStatic = true;  
     isAnim = false;
     isPartyMode = false;
-    shouldBeStatic = true;
-    Serial.println(arg);
-    Display.displayClear();
+    matrix.clear();
+    matrix.setTextWrap(true);
+    matrix.fillScreen(0);
+    matrix.setCursor(0, 4);
+    matrix.print(SerialBT.readStringUntil(defChar));
+    //Serial.println(SerialBT.readString());
+    matrix.show();
+    SerialBT.flush();
+    //Display.displayClear();
     //Display.displayScroll("Aaaaa",PA_RIGHT,PA_SCROLL_LEFT,100);
     //replacechar(dupaText, '_', ' ');
-    for (size_t i = 0; i < TABLEN; i++)
-    {
-      if(arg[i] == '`'){
-        arg[i] = ' ';
-      }
-    }
-    strncpy(dupaText,arg,TABLEN);
-    Display.displayScroll(dupaText, state, scrollState, scrollSpeed);
+    // for (size_t i = 0; i < TABLEN; i++)
+    // {
+    //   if(arg[i] == '`'){
+    //     arg[i] = ' ';
+    //   }
+    // }
+    // strncpy(dupaText,arg,TABLEN);
+    // Display.displayScroll(dupaText, state, scrollState, scrollSpeed);
     
-  }
+  
   //Display.displayScroll("Hello there", PA_RIGHT, PA_SCROLL_LEFT, 100);
 }
 
 void LoadNewStaticText() {
   char *arg = NULL;
-  //arg = uduino.next();
-  arg = (char*)SerialBT.read();
-  Serial.write(arg);
+  arg = uduino.next();
+  //arg = (char*)SerialBT.read();
+  //Serial.write(arg);
   if (arg != NULL)
   {
     shouldBeStatic = false;
     Serial.println(arg);
-    Display.displayClear();
     //replacechar(dupaText, '_', ' ');
     for (size_t i = 0; i < TABLEN; i++)
     {
-      if(arg[i] == '`'){
+      if(arg[i] == defChar){
         arg[i] = ' ';
       }
     }
     strncpy(staticText,arg,TABLEN);
-    Display.setTextAlignment(state);
   }
   //Display.displayScroll("Hello there", PA_RIGHT, PA_SCROLL_LEFT, 100);
 }
@@ -280,7 +311,7 @@ void LoadAnimText1() {
     Serial.println(arg);
     for (size_t i = 0; i < TABLEN; i++)
     {
-      if(arg[i] == '`'){
+      if(arg[i] == defChar){
         arg[i] = ' ';
       }
     }
@@ -296,7 +327,7 @@ void LoadAnimText2() {
     Serial.println(arg);
     for (size_t i = 0; i < TABLEN; i++)
     {
-      if(arg[i] == '`'){
+      if(arg[i] == defChar){
         arg[i] = ' ';
       }
     }
@@ -312,7 +343,7 @@ void LoadAnimText3() {
     Serial.println(arg);
     for (size_t i = 0; i < TABLEN; i++)
     {
-      if(arg[i] == '`'){
+      if(arg[i] == defChar){
         arg[i] = ' ';
       }
     }
@@ -321,13 +352,9 @@ void LoadAnimText3() {
 }
 
 void ChangePower() {
-  char *arg = NULL;
-  arg = uduino.next();
-  if (arg != NULL)
-  {
-    Display.setIntensity(atoi(arg));
-    Serial.println(arg);
-  }
+    matrix.setBrightness(atoi(SerialBT.readStringUntil(defChar).c_str()));
+    matrix.show();
+    SerialBT.flush();
 }
 
 void SetInverseMode(){
@@ -361,12 +388,7 @@ void SetAnimMode(){
 }
 
 void SetScrollSpeed(){
-  char *arg = NULL;
-  arg = uduino.next();
-  if (arg != NULL)
-  {
-    scrollSpeed = atoi(arg);
-  }
+    scrollSpeed = atoi(SerialBT.readStringUntil(defChar).c_str());
 }
 
 void SetPartyModeSpeed(){
@@ -381,60 +403,60 @@ void SetPartyModeSpeed(){
 void SetAlign() {
   char *arg = NULL;
   arg = uduino.next();
-  if (arg != NULL)
-  {
-     stateVal = atoi(arg);
-     switch (stateVal)
-    {
-    case 0:
-    state = PA_CENTER;
-      break;
-    case 1:
-    state = PA_RIGHT;
-      break;
-    case 2:
-    state = PA_LEFT;
-      break;
-    }
-    Display.setTextAlignment(state);
-  }
+  // if (arg != NULL)
+  // {
+  //    stateVal = atoi(arg);
+  //    switch (stateVal)
+  //   {
+  //   case 0:
+  //   state = PA_CENTER;
+  //     break;
+  //   case 1:
+  //   state = PA_RIGHT;
+  //     break;
+  //   case 2:
+  //   state = PA_LEFT;
+  //     break;
+  //   }
+  //   Display.setTextAlignment(state);
+  // }
 }
 
 void SetScrollAlign() {
   char *arg = NULL;
   arg = uduino.next();
-  if (arg != NULL)
-  {
-    Serial.println(arg);
-    stateVal = atoi(arg);
-    switch (stateVal)
-    {
-    case 0:
-    scrollState = PA_SCROLL_LEFT;
-      break;
-    case 1:
-    scrollState = PA_SCROLL_UP_LEFT;
-      break;
-    case 2:
-    scrollState = PA_SCROLL_UP;
-    break;
-    case 3:
-    scrollState = PA_SCROLL_UP_RIGHT;
-    break;
-    case 4:
-    scrollState = PA_SCROLL_RIGHT;
-    break;
-    case 5:
-    scrollState = PA_SCROLL_DOWN_RIGHT;
-    break;
-    case 6:
-    scrollState = PA_SCROLL_DOWN;
-    break;
-    case 7:
-    scrollState = PA_SCROLL_DOWN_LEFT;
-    break;
-    }
-  }
+  // if (arg != NULL)
+  // {
+  //   Serial.println(arg);
+  //   stateVal = atoi(arg);
+  //   switch (stateVal)
+  //   {
+  //   case 0:
+  //   scrollState = PA_SCROLL_LEFT;
+  //     break;
+  //   case 1:
+  //   scrollState = PA_SCROLL_UP_LEFT;
+  //     break;
+  //   case 2:
+  //   scrollState = PA_SCROLL_UP;
+  //   break;
+  //   case 3:
+  //   scrollState = PA_SCROLL_UP_RIGHT;
+  //   break;
+  //   case 4:
+  //   scrollState = PA_SCROLL_RIGHT;
+  //   break;
+  //   case 5:
+  //   scrollState = PA_SCROLL_DOWN_RIGHT;
+  //   break;
+  //   case 6:
+  //   scrollState = PA_SCROLL_DOWN;
+  //   break;
+  //   case 7:
+  //   scrollState = PA_SCROLL_DOWN_LEFT;
+  //   break;
+  //   }
+  // }
 }
 
 // char *arg = NULL;
@@ -451,31 +473,122 @@ void SetScrollAlign() {
 //     strncpy(animText2,arg,TABLEN);
 //   }
 
+int line_pass = 0;
+int x = matrix.width();
+
+void ScrollText(){
+  
+  String scrollText = "hi";
+  //scrollText = SerialBT.readStringUntil('`');
+  
+  
+  matrix.print(F("RFduino"));
+  int maxDisplaysment = scrollText.length() * 4 + matrix.width();
+  // for (size_t i = 0; i < maxDisplaysment; i++)
+  // {
+    //if(++line_pass > matrix.width()) line_pass = 0;
+    matrix.fillScreen(0);
+    matrix.setCursor(x, 4);
+    if(--x < -maxDisplaysment) {
+      x = matrix.width();
+    }
+    matrix.show();
+    delay(scrollSpeed);
+  //}
+}
+
+void SetTextColor(){
+  int r = atoi(SerialBT.readStringUntil(defChar).c_str());
+  int g = atoi(SerialBT.readStringUntil(defChar).c_str());
+  int b = atoi(SerialBT.readStringUntil(defChar).c_str());
+  matrix.setTextColor(matrix.Color(r, g, b));
+  matrix.show();
+  SerialBT.flush();
+}
+
+void PaintPixels(){
+  paint:
+  int xPosition = atoi(SerialBT.readStringUntil(defChar).c_str());
+  int yPosition = atoi(SerialBT.readStringUntil(defChar).c_str());
+  int r = atoi(SerialBT.readStringUntil(defChar).c_str());
+  int g = atoi(SerialBT.readStringUntil(defChar).c_str());
+  int b = atoi(SerialBT.readStringUntil(defChar).c_str());
+  Serial.println(xPosition);
+  Serial.println(yPosition);
+  Serial.println(r);
+  Serial.println(g);
+  Serial.println(b);
+  matrix.drawPixel(xPosition, yPosition, matrix.Color(r, g, b)); 
+  matrix.show();
+
+  if(SerialBT.readStringUntil(defChar) == "pp") goto paint;
+  else SerialBT.flush();
+}
+
+String scrollTextIn = "";
+
 void loop()
 {
-  uduino.update();
-  
-if (Serial.available()) {
-    SerialBT.write(Serial.read());
-    // Display.print(Serial.read());
+  //uduino.update();
+  //char buffer[myString.length() + 1];
+
+  String command = "";
+  command = SerialBT.readStringUntil(defChar));
+  Serial.print(command);
+  if(command == "lnt") LoadNewText();
+  if(command == "cp") ChangePower();
+  if(command == "pp") PaintPixels();
+  if(command == "cl"){ matrix.clear(); matrix.show();}
+  if(command == "stc") SetTextColor();
+  if(command == "sss") SetScrollSpeed();
+  if(command == "st"){ 
+    scrollTextIn = SerialBT.readStringUntil(defChar);
+    matrix.print(scrollTextIn);
+    shouldBeStatic = false;  
+    isAnim = false;
+    isPartyMode = false;
+    matrix.setTextWrap(false);
   }
-  if (SerialBT.available()) {
-    // char hub = SerialBT.read();
-    // Serial.write(hub);
-    // Display.print(hub);
-    // Display.setTextAlignment(state);
-  }
-  delay(100);
+  //if(!shouldBeStatic) 
+  // matrix.print(scrollTextIn);
+  // int maxDisplaysment = scrollTextIn.length() * 4 + matrix.width();
+  // Serial.print(maxDisplaysment);
+  // Serial.print(scrollTextIn);
+  // for (size_t i = 0; i < maxDisplaysment; i++)
+  // {
+    //if(++line_pass > matrix.width()) line_pass = 0;
+    // matrix.fillScreen(0);
+    // matrix.setCursor(x, 4);
+    // if(--x < -maxDisplaysment) {
+    //   x = matrix.width();
+    // }
+    matrix.show();
+    delay(100);
+  //}
+
+  //delay(100);
+
+// if (Serial.available()) {
+//     SerialBT.write(Serial.read());
+//     // Display.print(Serial.read());
+//   }
+//   if (SerialBT.available()) {
+//     // char hub = SerialBT.read();
+//     // Serial.write(hub);
+//     // Display.print(hub);
+//     // Display.setTextAlignment(state);
+//   }
+//   delay(100);
 
   // if (Display.displayAnimate()) {
-  //   Display.displayReset();
-  // }
+  //    Display.displayReset();
+  //  }
   
   // if(!shouldBeStatic){
   //   Display.print(staticText);
-  //   Display.setInvert(isInverse);
-  //   delay(partySpeed);
-  // }
+  //    Display.setInvert(isInverse);
+  //    delay(partySpeed);
+  //  }
   
   // if(isAnim){
   //   Display.print(animText1);
