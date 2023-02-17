@@ -1,17 +1,15 @@
-#include <Uduino.h>
-#include<Uduino_Wifi.h>
+#include <Arduino.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_NeoMatrix.h>
 #include <Adafruit_NeoPixel.h>
 //#include <Adafruit_TFTLCD.h>
-#include <Fonts/FontsFree_Net_uni05_534pt7b.h>
+#include <Fonts/CyberFont__1_8pt7b.h>
+//#include "MAX17043.h"
 #ifndef PSTR
  #define PSTR // Make Arduino Due happy
 #endif
 
-#define PIN 12
-
-Uduino_Wifi uduino("uduinoBoard");
+#define PIN 22
 
 
 //char * dupaText="Staly Tekst";
@@ -19,28 +17,21 @@ Uduino_Wifi uduino("uduinoBoard");
 char dupaText[TABLEN];
 char staticText[TABLEN];
 
-char animText1[TABLEN];
-char animText2[TABLEN];
-char animText3[TABLEN];
-
 bool shouldBeStatic = false;
 bool isInverse = false;
 bool isPartyMode = false;
-// textEffect_t scrollState = PA_SCROLL_LEFT;
-// textPosition_t state = PA_CENTER;
+int scrollAlign = 0;
+int textAlign = 0;
 int stateVal = 0;
 
 int scrollSpeed = 100;
 int partySpeed = 500;
+int yTextOffset = 7;
+int spacingBetweenLetters = 1;
 bool isAnim = false;
 char defChar = '`';
+String text = "";
 
-//Connect TX pin of the HC-05 to RX pin of the Arduino
-//Connect RX pin of the HC-05 to TX pin of the Arduino
-//You can use SoftwareSerial Library, but i dont recommend it for fast and long data transmission
-//Otherwise you have to check Serial.available() > excepted number of bytes sent before reading the message
-//There's no problem with hardware serial that comes with the arduino. It's perfect
-//
 #include "BluetoothSerial.h"
 
 #if !defined(CONFIG_BT_ENABLED) || !defined(CONFIG_BLUEDROID_ENABLED)
@@ -68,186 +59,33 @@ void setup()
 {
   Serial.begin(9600);
   SerialBT.begin(9600);
-  SerialBT.begin("ESP32 Badge");
+  SerialBT.begin("Badge1");
   Serial.println("The device started, now you can pair it with bluetooth!");
   matrix.begin();
   matrix.setTextWrap(true);
   matrix.setBrightness(40);
-  matrix.setTextColor(colors[0]);
-  Serial.begin(9600);
+  matrix.setTextColor(colors[2]);
+  //matrix.setRotation(90);
   //matrix.fillScreen(colors[0]);
-  matrix.show();
+  //FuelGauge.begin();
+  
   delay(3000);
   matrix.clear();
-  matrix.setFont(&FontsFree_Net_uni05_534pt7b);
+  matrix.setFont(&CyberFont__1_8pt7b);
   matrix.fillScreen(0);
-  matrix.setCursor(0, 4);
-  matrix.setTextColor(colors[2]);
-
+  matrix.setCursor(0, yTextOffset);
+  //float percentage = FuelGauge.percent();
+  //float voltage = FuelGauge.voltage();
+  //matrix.print(percentage);
+  matrix.show();
+  
 #if defined (__AVR_ATmega32U4__) // Leonardo
   while (!Serial) {}
 #elif defined(__PIC32MX__)
   delay(1000);
 #endif
-
-  // Optional functions,  to add BEFORE connectWifi(...)
-  //uduino.setPort(4222);   // default 4222
-  //uduino.connectWifi("eduram", "zarazcipodam");
-  //uduino.connectWifi("5G-Vectra-WiFi-16B63C", "bsh7nrhq4h0g2edo");
-  //uduino.connectWifi("Bogdan", "mjku9075");
-
-  uduino.addCommand("s", SetMode);
-  uduino.addCommand("d", WritePinDigital);
-  uduino.addCommand("a", WritePinAnalog);
-  uduino.addCommand("rd", ReadDigitalPin);
-  uduino.addCommand("r", ReadAnalogPin);
-  uduino.addCommand("br", BundleReadPin);
-  uduino.addCommand("b", ReadBundle);
-  uduino.addCommand("sim", SetInverseMode);
-  uduino.addCommand("spm", SetPartyMode);
-  uduino.addCommand("spms", SetPartyModeSpeed);
-  uduino.addCommand("lnt", LoadNewText);
-  uduino.addCommand("cp", ChangePower);
-  uduino.addCommand("ssa", SetScrollAlign);
-  uduino.addCommand("sa", SetAlign);
-  uduino.addCommand("lnst", LoadNewStaticText);
-  uduino.addCommand("sam", SetAnimMode);
-  uduino.addCommand("sss", SetScrollSpeed);
-  uduino.addCommand("lat1", LoadAnimText1);
-  uduino.addCommand("lat2", LoadAnimText2);
-  uduino.addCommand("lat3", LoadAnimText3);
-
-  Serial.println("Hello");
-  //snprintf(dupaText,TABLEN,<IP KTOREODCZYTALEM>)
-  //uduino.ge
-  
 }
 
-void ReadBundle() {
-  char *arg = NULL;
-  char *number = NULL;
-  number = uduino.next();
-  int len = 0;
-  if (number != NULL)
-    len = atoi(number);
-  for (int i = 0; i < len; i++) {
-    uduino.launchCommand(arg);
-  }
-}
-
-void SetMode() {
-  int pinToMap = 100; //100 is never reached
-  char *arg = NULL;
-  arg = uduino.next();
-  if (arg != NULL)
-  {
-    pinToMap = atoi(arg);
-  }
-  int type;
-  arg = uduino.next();
-  if (arg != NULL)
-  {
-    //type = atoi(arg);
-    //PinSetMode(pinToMap, type);
-  }
-}
-
-// void PinSetMode(int pin, int type) {
-//   switch (type) {
-//     case 0: // Output
-//       pinMode(pin, OUTPUT);
-//       break;
-//     case 1: // PWM
-//       pinMode(pin, OUTPUT);
-//       break;
-//     case 2: // Analog
-//       pinMode(pin, INPUT);
-//       break;
-//     case 3: // Input_Pullup
-//       pinMode(pin, INPUT_PULLUP);
-//       break;
-//   }
-// }
-
-void WritePinAnalog() {
-  int pinToMap = 100;
-  char *arg = NULL;
-  arg = uduino.next();
-  if (arg != NULL)
-  {
-    pinToMap = atoi(arg);
-  }
-
-  int valueToWrite;
-  arg = uduino.next();
-  if (arg != NULL)
-  {
-    valueToWrite = atoi(arg);
-  }
-}
-
-void WritePinDigital() {
-  int pinToMap = -1;
-  char *arg = NULL;
-  arg = uduino.next();
-  if (arg != NULL)
-    pinToMap = atoi(arg);
-
-  int writeValue;
-  arg = uduino.next();
-  if (arg != NULL && pinToMap != -1)
-  {
-    writeValue = atoi(arg);
-    digitalWrite(pinToMap, writeValue);
-  }
-}
-
-void ReadAnalogPin() {
-  int pinToRead = -1;
-  char *arg = NULL;
-  arg = uduino.next();
-  if (arg != NULL)
-  {
-    pinToRead = atoi(arg);
-    //if (pinToRead != -1)
-      //printValue(pinToRead, analogRead(pinToRead));
-  }
-}
-
-void ReadDigitalPin() {
-  int pinToRead = -1;
-  char *arg = NULL;
-  arg = uduino.next();
-  if (arg != NULL)
-  {
-    pinToRead = atoi(arg);
-  }
-
-  //if (pinToRead != -1)
-    //printValue(pinToRead, digitalRead(pinToRead));
-}
-
-void BundleReadPin() {
-  int pinToRead = -1;
-  char *arg = NULL;
-  arg = uduino.next();
-  if (arg != NULL)
-  {
-    pinToRead = atoi(arg);
-    //if (pinToRead != -1)
-      //printValue(pinToRead, analogRead(pinToRead));
-  }
-}
-
-// int replacechar(char *str, char orig, char rep) {
-//     char *ix = str;
-//     int n = 0;
-//     while((ix = strchr(ix, orig)) != NULL) {
-//         *ix++ = rep;
-//         n++;
-//     }
-//     return n;
-// }
 
 void LoadNewText() {
   char *arg = NULL;
@@ -261,8 +99,13 @@ void LoadNewText() {
     matrix.clear();
     matrix.setTextWrap(true);
     matrix.fillScreen(0);
-    matrix.setCursor(0, 4);
-    matrix.print(SerialBT.readStringUntil(defChar));
+    matrix.setCursor(0, yTextOffset);
+    
+    //text = SerialBT.readStringUntil(defChar);
+    text = SerialBT.readStringUntil(defChar);
+
+    //matrix.setRotation(90);
+    matrix.print(text);
     //Serial.println(SerialBT.readString());
     matrix.show();
     SerialBT.flush();
@@ -284,7 +127,6 @@ void LoadNewText() {
 
 void LoadNewStaticText() {
   char *arg = NULL;
-  arg = uduino.next();
   //arg = (char*)SerialBT.read();
   //Serial.write(arg);
   if (arg != NULL)
@@ -303,54 +145,6 @@ void LoadNewStaticText() {
   //Display.displayScroll("Hello there", PA_RIGHT, PA_SCROLL_LEFT, 100);
 }
 
-void LoadAnimText1() {
-  char *arg = NULL;
-  arg = uduino.next();
-  if (arg != NULL)
-  {
-    Serial.println(arg);
-    for (size_t i = 0; i < TABLEN; i++)
-    {
-      if(arg[i] == defChar){
-        arg[i] = ' ';
-      }
-    }
-    strncpy(animText1,arg,TABLEN);
-  }
-}
-
-void LoadAnimText2() {
-  char *arg = NULL;
-  arg = uduino.next();
-  if (arg != NULL)
-  {
-    Serial.println(arg);
-    for (size_t i = 0; i < TABLEN; i++)
-    {
-      if(arg[i] == defChar){
-        arg[i] = ' ';
-      }
-    }
-    strncpy(animText2,arg,TABLEN);
-  }
-}
-
-void LoadAnimText3() {
-  char *arg = NULL;
-  arg = uduino.next();
-  if (arg != NULL)
-  {
-    Serial.println(arg);
-    for (size_t i = 0; i < TABLEN; i++)
-    {
-      if(arg[i] == defChar){
-        arg[i] = ' ';
-      }
-    }
-    strncpy(animText3,arg,TABLEN);
-  }
-}
-
 void ChangePower() {
     matrix.setBrightness(atoi(SerialBT.readStringUntil(defChar).c_str()));
     matrix.show();
@@ -359,7 +153,6 @@ void ChangePower() {
 
 void SetInverseMode(){
   char *arg = NULL;
-  arg = uduino.next();
   if (arg != NULL)
   {
     isInverse = atoi(arg);
@@ -369,7 +162,6 @@ void SetInverseMode(){
 
 void SetPartyMode(){
   char *arg = NULL;
-  arg = uduino.next();
   if (arg != NULL)
   {
     isAnim = false;
@@ -379,7 +171,6 @@ void SetPartyMode(){
 
 void SetAnimMode(){
   char *arg = NULL;
-  arg = uduino.next();
   if (arg != NULL)
   {
     isPartyMode = false;
@@ -393,7 +184,6 @@ void SetScrollSpeed(){
 
 void SetPartyModeSpeed(){
   char *arg = NULL;
-  arg = uduino.next();
   if (arg != NULL)
   {
     partySpeed = atoi(arg);
@@ -401,30 +191,29 @@ void SetPartyModeSpeed(){
 }
 
 void SetAlign() {
-  char *arg = NULL;
-  arg = uduino.next();
-  // if (arg != NULL)
-  // {
-  //    stateVal = atoi(arg);
-  //    switch (stateVal)
-  //   {
-  //   case 0:
-  //   state = PA_CENTER;
-  //     break;
-  //   case 1:
-  //   state = PA_RIGHT;
-  //     break;
-  //   case 2:
-  //   state = PA_LEFT;
-  //     break;
-  //   }
-  //   Display.setTextAlignment(state);
-  // }
+  //char *arg = NULL;
+  //arg = uduino.next();
+
+  String arg = "";
+  arg = SerialBT.readStringUntil(defChar);
+
+  if (arg != NULL)
+  {
+    arg;
+    if(arg == "0")
+        matrix.setCursor(0, yTextOffset);
+    if(arg == "1")
+        matrix.setCursor(16, yTextOffset);
+    if(arg == "2")
+        matrix.setCursor(32, yTextOffset);
+     
+     
+     //Display.setTextAlignment(state);
+  }
 }
 
 void SetScrollAlign() {
   char *arg = NULL;
-  arg = uduino.next();
   // if (arg != NULL)
   // {
   //   Serial.println(arg);
@@ -484,17 +273,17 @@ void ScrollText(){
   
   matrix.print(F("RFduino"));
   int maxDisplaysment = scrollText.length() * 4 + matrix.width();
-  // for (size_t i = 0; i < maxDisplaysment; i++)
-  // {
-    //if(++line_pass > matrix.width()) line_pass = 0;
+  for (size_t i = 0; i < maxDisplaysment; i++)
+  {
+    if(++line_pass > matrix.width()) line_pass = 0;
     matrix.fillScreen(0);
-    matrix.setCursor(x, 4);
+    matrix.setCursor(x, yTextOffset);
     if(--x < -maxDisplaysment) {
       x = matrix.width();
     }
     matrix.show();
     delay(scrollSpeed);
-  //}
+  }
 }
 
 void SetTextColor(){
@@ -502,6 +291,7 @@ void SetTextColor(){
   int g = atoi(SerialBT.readStringUntil(defChar).c_str());
   int b = atoi(SerialBT.readStringUntil(defChar).c_str());
   matrix.setTextColor(matrix.Color(r, g, b));
+  matrix.print(text);
   matrix.show();
   SerialBT.flush();
 }
@@ -527,13 +317,29 @@ void PaintPixels(){
 
 String scrollTextIn = "";
 
+void ShowBatteryState(){
+  String batteryInfo = "";
+
+  batteryInfo = "medium";
+
+  SerialBT.println(batteryInfo);
+  SerialBT.flush();
+}
+
+void ChangeName(){
+  String newName = SerialBT.readStringUntil(defChar).c_str();
+
+  
+  //SerialBT.
+  SerialBT.flush();
+}
+
 void loop()
 {
   //uduino.update();
   //char buffer[myString.length() + 1];
-
   String command = "";
-  command = SerialBT.readStringUntil(defChar));
+  command = SerialBT.readStringUntil(defChar);
   Serial.print(command);
   if(command == "lnt") LoadNewText();
   if(command == "cp") ChangePower();
@@ -541,14 +347,21 @@ void loop()
   if(command == "cl"){ matrix.clear(); matrix.show();}
   if(command == "stc") SetTextColor();
   if(command == "sss") SetScrollSpeed();
+  if(command == "sa") SetAlign();
   if(command == "st"){ 
-    scrollTextIn = SerialBT.readStringUntil(defChar);
-    matrix.print(scrollTextIn);
+    //scrollTextIn = SerialBT.readStringUntil(defChar);
+    //matrix.print(scrollTextIn);
     shouldBeStatic = false;  
     isAnim = false;
     isPartyMode = false;
     matrix.setTextWrap(false);
+    ScrollText();
   }
+  if(command == "sbs") ShowBatteryState();
+  if(command == "cn") ChangeName();
+  
+  //LoadNewText();
+
   //if(!shouldBeStatic) 
   // matrix.print(scrollTextIn);
   // int maxDisplaysment = scrollTextIn.length() * 4 + matrix.width();
@@ -558,7 +371,7 @@ void loop()
   // {
     //if(++line_pass > matrix.width()) line_pass = 0;
     // matrix.fillScreen(0);
-    // matrix.setCursor(x, 4);
+    // matrix.setCursor(x, 6);
     // if(--x < -maxDisplaysment) {
     //   x = matrix.width();
     // }
@@ -606,9 +419,4 @@ void loop()
   // }
 }
 
-void printValue(int pin, int targetValue) {
-  uduino.print(pin);
-  uduino.print(" "); //<- Todo : Change that with Uduino delimiter
-  uduino.println(targetValue);
-}
 
