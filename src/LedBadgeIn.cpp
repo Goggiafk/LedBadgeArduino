@@ -41,12 +41,8 @@ const uint16_t colors[] = {
 
 uint16_t matrixMap[8][32];
 
-//char * dupaText="Staly Tekst";
-#define TABLEN 100
-char dupaText[TABLEN];
-char staticText[TABLEN];
 
-bool shouldBeStatic;
+bool shouldBeStatic = true;
 bool isInverse = false;
 bool isPartyMode = false;
 int scrollAlign = 0;
@@ -56,11 +52,12 @@ int stateVal = 0;
 int scrollSpeed = 100;
 int partySpeed = 500;
 int yTextOffset = 7;
+int xTextOffset = 0;
 int spacingBetweenLetters = 1;
 bool isAnim = false;
 char defChar = '`';
 String text = "";
-String scrollTextIn = "sex";
+String scrollTextIn = "";
 
 
 
@@ -107,7 +104,7 @@ void setup()
   matrix.clear();
   matrix.setFont(&CyberFont__1_8pt7b);
   matrix.fillScreen(0);
-  matrix.setCursor(0, yTextOffset);
+  matrix.setCursor(xTextOffset, yTextOffset);
   //float percentage = FuelGauge.percent();
   //float voltage = FuelGauge.voltage();
   //matrix.print(percentage);
@@ -127,8 +124,7 @@ void LoadNewText() {
   isPartyMode = false;
   matrix.clear();
   matrix.setTextWrap(true);
-  //matrix.fillScreen(0);
-  matrix.setCursor(0, yTextOffset);
+  matrix.setCursor(xTextOffset, yTextOffset);
   text = SerialBT.readStringUntil(defChar);
   matrix.print(text);
   matrix.show();
@@ -203,61 +199,37 @@ void SetPartyModeSpeed(){
 }
 
 void SetAlign() {
-  //char *arg = NULL;
-  //arg = uduino.next();
-
   String arg = "";
-  arg = SerialBT.readStringUntil(defChar);
+  arg = atoi(SerialBT.readStringUntil(defChar).c_str());
 
+  Serial.print(arg);
   if (arg != NULL)
   {
-    arg;
-    if(arg == "0")
-        matrix.setCursor(0, yTextOffset);
-    if(arg == "1")
-        matrix.setCursor(16, yTextOffset);
-    if(arg == "2")
-        matrix.setCursor(32, yTextOffset);
-     
-     
-     //Display.setTextAlignment(state);
+    if(arg == "0"){
+      if(xTextOffset < matrix.width()-5)
+        xTextOffset++;
+    }
+    if(arg == "1"){
+      if(xTextOffset > -matrix.width() + 5)
+        xTextOffset--;
+    }
+    if(arg == "2"){
+        xTextOffset = 0;
+    }
+    matrix.setCursor(xTextOffset, yTextOffset);
+    matrix.clear();
+    matrix.print(text);
+    matrix.show();
   }
 }
 
 void SetScrollAlign() {
-  char *arg = NULL;
-  // if (arg != NULL)
-  // {
-  //   Serial.println(arg);
-  //   stateVal = atoi(arg);
-  //   switch (stateVal)
-  //   {
-  //   case 0:
-  //   scrollState = PA_SCROLL_LEFT;
-  //     break;
-  //   case 1:
-  //   scrollState = PA_SCROLL_UP_LEFT;
-  //     break;
-  //   case 2:
-  //   scrollState = PA_SCROLL_UP;
-  //   break;
-  //   case 3:
-  //   scrollState = PA_SCROLL_UP_RIGHT;
-  //   break;
-  //   case 4:
-  //   scrollState = PA_SCROLL_RIGHT;
-  //   break;
-  //   case 5:
-  //   scrollState = PA_SCROLL_DOWN_RIGHT;
-  //   break;
-  //   case 6:
-  //   scrollState = PA_SCROLL_DOWN;
-  //   break;
-  //   case 7:
-  //   scrollState = PA_SCROLL_DOWN_LEFT;
-  //   break;
-  //   }
-  // }
+  String arg = "";
+  arg = SerialBT.readStringUntil(defChar);
+  if (arg != NULL)
+  {
+    scrollAlign = atoi(arg.c_str());
+  }
 }
 
 int line_pass = 0;
@@ -266,6 +238,7 @@ int x = matrix.width();
 void ScrollText(){
   matrix.clear();
   scrollTextIn = SerialBT.readStringUntil(defChar);
+  shouldBeStatic = true;
   matrix.print(scrollTextIn);
   shouldBeStatic = false;  
   isAnim = false;
@@ -360,6 +333,7 @@ void FillScreen(){
   matrix.show();
 }
 
+String batteryCommand = "";
 void ExecuteCommand(){
   String command = "";
   command += SerialBT.readStringUntil(defChar);
@@ -375,8 +349,12 @@ void ExecuteCommand(){
     }
   }
   if(command == "stc") SetTextColor();
-  if(command == "sbs") showBattery();  
+  if(command == "sbs"){ 
+    showBattery(); 
+    batteryCommand = command;
+  } 
   if(command == "sa") SetAlign();
+  if(command == "ssa") SetScrollAlign();
   if(command == "st"){ 
     ScrollText();
     shouldBeStatic = false;
@@ -390,7 +368,6 @@ void ExecuteCommand(){
 }
 
 void showBattery(){
-
     const float scale_a = 1.1;
     const float scale_b = 0.0;
 
@@ -432,25 +409,35 @@ void loop()
     ExecuteCommand();
   }
 
-  // if(shouldBeStatic == false) {
-  //   textLength = scrollTextIn.length() * 5 + matrix.width();
-  //   for (size_t i = 0; i < textLength; i++)
-  //   {
-  //     if(SerialBT.available()){
-  //       ExecuteCommand();
-  //       break;
-  //     } else {
-  //       matrix.fillScreen(0);
-  //       matrix.setCursor(x, yTextOffset);
-  //       matrix.print(scrollTextIn);
-  //       --x;
-  //       matrix.show();
-  //       delay(scrollSpeed);
-  //     //}
-  //   }
-  //   x = matrix.width();
-  // }
-  // }
+  if(shouldBeStatic == false) {
+    textLength = scrollTextIn.length() * 5 + matrix.width();
+    int scrollLength = textLength;
+    if(scrollAlign == 4)
+      scrollLength += matrix.width();
+    for (size_t i = 0; i < scrollLength; i++)
+    {
+      if(shouldBeStatic == false) {
+        if(SerialBT.available()){
+          ExecuteCommand();
+        }
+        matrix.fillScreen(0);
+        matrix.setCursor(x, yTextOffset);
+        matrix.print(scrollTextIn);
+        if(scrollAlign == 0)
+          --x;
+        if(scrollAlign == 4)
+          ++x;
+        matrix.show();
+        delay(scrollSpeed);
+    } else
+    break;
+    }
+    if(scrollAlign == 0)
+      x = matrix.width();
+    if(scrollAlign == 4)
+      x = -textLength;
+  }
+   
 
   buttonA.loop();
   buttonB.loop();
