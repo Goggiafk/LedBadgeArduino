@@ -508,9 +508,7 @@ void updateBattery(){
 	{
 		lastRefreshTime += REFRESH_INTERVAL;
     avgBuff[buffPtr%avgBuffLen] = currentVoltage;
-    buffPtr++;
-
-
+    
     //fill buffer on 1st pass
     if (buffPtr == 0){    
       for (int i=0;i<avgBuffLen;i++){
@@ -518,6 +516,7 @@ void updateBattery(){
       }
     }
 
+    buffPtr++;
     int voltageAcc = 0;
 
     for (int i=0;i<avgBuffLen;i++){
@@ -525,7 +524,7 @@ void updateBattery(){
     }
 
     g_voltage = voltageAcc / avgBuffLen;
-    Serial.printf("voltage: %d\n\r",g_voltage);
+    // Serial.printf("voltage: %d\n\r",g_voltage);
 	}  
 }
 
