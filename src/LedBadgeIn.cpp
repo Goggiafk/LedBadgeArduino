@@ -74,7 +74,7 @@ bool pin3canceled = true;
 
 void setup()
 {
-  Serial.begin(9600);
+  Serial.begin(115200);
   SerialBT.begin(9600);
   SerialBT.begin("Badge1");
   Serial.println("The device started, now you can pair it with bluetooth!");
