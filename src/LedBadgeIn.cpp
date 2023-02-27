@@ -17,6 +17,7 @@
 void tap(Button2& btn);
 void ExecuteCommand();
 void showBattery();
+void updateBattery();
 
 Button2 buttonA, buttonB, buttonC;
 
@@ -41,6 +42,7 @@ const uint16_t colors[] = {
 
 uint16_t matrixMap[8][32];
 
+int g_voltage = 0;
 
 bool shouldBeStatic = true;
 bool isInverse = false;
@@ -74,7 +76,7 @@ bool pin3canceled = true;
 
 void setup()
 {
-  Serial.begin(9600);
+  Serial.begin(115200);
   SerialBT.begin(9600);
   SerialBT.begin("Badge1");
   Serial.println("The device started, now you can pair it with bluetooth!");
@@ -380,14 +382,9 @@ void ExecuteCommand(){
 }
 
 void showBattery(){
-    const float scale_a = 1.1;
-    const float scale_b = 0.0;
+    
+    float LiPoVoltage = g_voltage / 1000.0;
 
-    //0 - 0V, 4096 - 3.3V
-    int value = analogRead(15);
-
-    //The battery voltage is divided by 1.5
-    float LiPoVoltage = (value * 3.3/4096)*1.5*scale_a + scale_b;
     String batteryInfo = "";
     //matrix.fillScreen(0);
     //matrix.setCursor(0, yTextOffset);
@@ -455,7 +452,11 @@ void loop()
   buttonB.loop();
   buttonC.loop();
 
-  
+  updateBattery();
+  if (g_voltage < 3400){
+    // badge should indicate very low battery 
+    // and go to sleep.
+  }
 
   //delay(100);
 
@@ -490,6 +491,57 @@ void loop()
   //   delay(partySpeed);
   // }
 }
+
+uint16_t measureBattVoltage(){
+  const float scale_a = 1.1;
+  const float scale_b = 0.0;
+
+  //0 - 0V, 4096 - 3.3V
+  int value = analogRead(15);
+
+  //The battery voltage is divided by 1.5
+  float LiPoVoltage = (value * 3.3/4096)*1.5*scale_a + scale_b;
+
+  return (uint16_t)(LiPoVoltage*1000.0);
+}
+
+void updateBattery(){
+	static const unsigned long REFRESH_INTERVAL = 100; // ms
+	static unsigned long lastRefreshTime = 0;
+	
+  const int avgBuffLen = 16;
+
+  static uint16_t avgBuff[avgBuffLen] = {0};
+  static int buffPtr = 0;
+
+  uint16_t currentVoltage = measureBattVoltage();
+
+	if(millis() - lastRefreshTime >= REFRESH_INTERVAL)
+	{
+		lastRefreshTime += REFRESH_INTERVAL;
+    avgBuff[buffPtr%avgBuffLen] = currentVoltage;
+    
+    //fill buffer on 1st pass
+    if (buffPtr == 0){    
+      for (int i=0;i<avgBuffLen;i++){
+        avgBuff[i] = currentVoltage;
+      }
+    }
+
+    buffPtr++;
+    int voltageAcc = 0;
+
+    for (int i=0;i<avgBuffLen;i++){
+      voltageAcc += avgBuff[i];
+    }
+
+    g_voltage = voltageAcc / avgBuffLen;
+    // Serial.printf("voltage: %d\n\r",g_voltage);
+	}  
+}
+
+
+
 float savedBrightness = 0;
 void tap(Button2& btn) {
   //  if (btn == buttonA) {
