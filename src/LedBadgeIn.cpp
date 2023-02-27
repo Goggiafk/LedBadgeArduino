@@ -294,27 +294,39 @@ int loadedInt;
 char loadedMap[maxPixels] = {0};
 
 void SaveDrawLoad(){
+  // for (size_t i = 0; i < matrix.width(); i++)
+  // {
+  //   for (size_t j = 0; j < matrix.height(); j++)
+  //   {
+  //     matrixMap[j][i] = matrix.Color(0, 0, 0);
+  //   }
+  // }
+  matrix.clear();  
+
 for(int i = 0; i < matrix.width(); i++){
     for(int j = 0; j < matrix.height(); j++){
       int x = atoi(SerialBT.readStringUntil(defChar).c_str());
-      delay(3); 
+      delay(5); 
       int y = atoi(SerialBT.readStringUntil(defChar).c_str());
-      delay(3); 
+      delay(5); 
       int r = atoi(SerialBT.readStringUntil(defChar).c_str());
-      delay(3); 
+      delay(5); 
       int g = atoi(SerialBT.readStringUntil(defChar).c_str());
-      delay(3); 
+      delay(5); 
       int b = atoi(SerialBT.readStringUntil(defChar).c_str());
       
+
       Serial.println(r);
       Serial.println(g);
       Serial.println(b);
       Serial.println(" ");
+      //matrixMap[x][y] = matrix.Color(r, g, b);
       matrix.drawPixel(x, y, matrix.Color(r, g, b));
+      delay(5);
       matrix.show();
-      delay(3);    
     }
   }
+  
 }
 
 
