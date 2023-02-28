@@ -78,18 +78,15 @@ void setup()
 {
   Serial.begin(115200);
   SerialBT.begin(9600);
-  SerialBT.begin("Badge1");
+  char badge_id[23];
+  snprintf(badge_id, 11, "Badge-%llX", ESP.getEfuseMac());  
+  SerialBT.begin(badge_id);
   Serial.println("The device started, now you can pair it with bluetooth!");
   matrix.begin();
   matrix.setTextWrap(true);
   matrix.setBrightness(20);
   matrix.setTextColor(colors[2]);
-  
-  
-  //matrix.setRotation(90);
-  //matrix.fillScreen(colors[0]);
-  //FuelGauge.begin();
-  
+
   delay(50);
   buttonA.begin(BUTTON_PIN_1);
   //buttonA.setClickHandler(click);
@@ -107,12 +104,9 @@ void setup()
   matrix.setFont(&CyberFont__1_8pt7b);
   matrix.fillScreen(0);
   matrix.setCursor(xTextOffset, yTextOffset);
-  //float percentage = FuelGauge.percent();
-  //float voltage = FuelGauge.voltage();
-  //matrix.print(percentage);
   matrix.show();
   
-#if defined (__AVR_ATmega32U4__) // Leonardo
+#if defined (__AVR_ATmega32U4__) 
   while (!Serial) {}
 #elif defined(__PIC32MX__)
   delay(1000);
@@ -296,27 +290,39 @@ int loadedInt;
 char loadedMap[maxPixels] = {0};
 
 void SaveDrawLoad(){
+  for (size_t i = 0; i < matrix.width(); i++)
+   {
+     for (size_t j = 0; j < matrix.height(); j++)
+     {
+       matrixMap[j][i] = matrix.Color(0, 0, 0);
+     }
+   }
+  matrix.clear();  
+
 for(int i = 0; i < matrix.width(); i++){
     for(int j = 0; j < matrix.height(); j++){
       int x = atoi(SerialBT.readStringUntil(defChar).c_str());
-      delay(3); 
+      delay(5); 
       int y = atoi(SerialBT.readStringUntil(defChar).c_str());
-      delay(3); 
+      delay(5); 
       int r = atoi(SerialBT.readStringUntil(defChar).c_str());
-      delay(3); 
+      delay(5); 
       int g = atoi(SerialBT.readStringUntil(defChar).c_str());
-      delay(3); 
+      delay(5); 
       int b = atoi(SerialBT.readStringUntil(defChar).c_str());
       
+
       Serial.println(r);
       Serial.println(g);
       Serial.println(b);
       Serial.println(" ");
+      //matrixMap[x][y] = matrix.Color(r, g, b);
       matrix.drawPixel(x, y, matrix.Color(r, g, b));
+      delay(5);
       matrix.show();
-      delay(3);    
     }
   }
+  
 }
 
 
@@ -365,7 +371,6 @@ void ExecuteCommand(){
   if(command == "cn") ChangeName();
   if(command == "sdl") SaveDrawLoad();
   if(command == "fc") FillScreen();
-  //if(command == "ant") AddNewText();
    
 }
 
@@ -374,8 +379,6 @@ void showBattery(){
     float LiPoVoltage = g_voltage / 1000.0;
 
     String batteryInfo = "";
-    //matrix.fillScreen(0);
-    //matrix.setCursor(0, yTextOffset);
     if (LiPoVoltage > 4.8){
       batteryInfo = "CHG";
     } else if(LiPoVoltage > 3.9 && LiPoVoltage <= 4.8){
@@ -388,14 +391,6 @@ void showBattery(){
       batteryInfo = "low";
     }
     SerialBT.println(batteryInfo);
-    //matrix.print(batteryInfo);
-    matrix.show();
-    
-
-    if(SerialBT.available()){
-      ExecuteCommand();
-    }
-     
 }
 
 int textLength = 0;
@@ -442,42 +437,7 @@ void loop()
 
   updateBattery();
   if (g_voltage < 3400){
-    // badge should indicate very low battery 
-    // and go to sleep.
   }
-
-  //delay(100);
-
-// if (Serial.available()) {
-//     SerialBT.write(Serial.read());
-//     // Display.print(Serial.read());
-//   }
-//   if (SerialBT.available()) {
-//     // char hub = SerialBT.read();
-//     // Serial.write(hub);
-//     // Display.print(hub);
-//     // Display.setTextAlignment(state);
-//   }
-//   delay(100);
-
-  // if (Display.displayAnimate()) {
-  //    Display.displayReset();
-  //  }
-
-  // if(isAnim){
-  //   Display.print(animText1);
-  //   delay(partySpeed);
-  //   Display.print(animText2);
-  //   delay(partySpeed);
-  //   Display.print(animText3);
-  //   delay(partySpeed);
-  // }
-  
-  // if(isPartyMode){
-  //   delay(partySpeed);
-  //   Display.print("");
-  //   delay(partySpeed);
-  // }
 }
 
 uint16_t measureBattVoltage(){
@@ -524,7 +484,6 @@ void updateBattery(){
     }
 
     g_voltage = voltageAcc / avgBuffLen;
-    // Serial.printf("voltage: %d\n\r",g_voltage);
 	}  
 }
 
