@@ -89,15 +89,12 @@ void setup()
 
   delay(50);
   buttonA.begin(BUTTON_PIN_1);
-  //buttonA.setClickHandler(click);
   buttonA.setTapHandler(tap);
 
   buttonB.begin(BUTTON_PIN_2);
-  //buttonB.setClickHandler(click);
   buttonB.setTapHandler(tap);
 
   buttonC.begin(BUTTON_PIN_3);
-  //buttonC.setClickHandler(click);
   buttonC.setTapHandler(tap);
 
   matrix.clear();
@@ -379,9 +376,9 @@ void showBattery(){
     float LiPoVoltage = g_voltage / 1000.0;
 
     String batteryInfo = "";
-    if (LiPoVoltage > 4.8){
+    if (LiPoVoltage > 4.65){
       batteryInfo = "CHG";
-    } else if(LiPoVoltage > 3.9 && LiPoVoltage <= 4.8){
+    } else if(LiPoVoltage > 3.9 && LiPoVoltage <= 4.65){
       batteryInfo = "high";
     } else 
     if(LiPoVoltage > 3.65 && LiPoVoltage <= 3.9){
@@ -491,43 +488,59 @@ void updateBattery(){
 
 float savedBrightness = 0;
 void tap(Button2& btn) {
-  //  if (btn == buttonA) {
-  //    Serial.print("tap1");
-  //   } else if (btn == buttonB) {
-  //     Serial.print("tap2");
-  //   } else if (btn == buttonC) {
-  //     Serial.print("tap3");
-  //   if(pin3canceled){
-  //     if(pin3clicked == false){ 
-  //       savedBrightness = matrix.getBrightness();
-  //       pin3clicked = true;
-  //       pin3canceled = false;
-  //       for (size_t i = savedBrightness; i > 1 ; i--)
-  //        {
-  //          matrix.setBrightness(i);
-  //          delay(1);
-  //          matrix.show();
-  //       }
-  //       matrix.setBrightness(1);
-  //       pin3canceled = true;
-  //     }
-  //     else{ 
-  //       pin3clicked = false;
-  //       pin3canceled = false;
-  //       for (size_t i = 1; i < savedBrightness; i++)
-  //       {
-  //         matrix.setBrightness(i);
-  //         delay(1);
-  //         matrix.show();
-  //       }
-  //       matrix.setBrightness(savedBrightness);
-  //       pin3canceled = true;
-        
-  //     }
-  //   }
-  //      //showScreen();
-  //   }
+    if (btn == buttonC) {
+      updateBattery();
+      Serial.print("tap1");
+      float LiPoVoltage = g_voltage / 1000.0;
+
+    String batteryInfo = "";
+    if (LiPoVoltage > 4.65){
+      batteryInfo = "CHG";
+    } else if(LiPoVoltage > 3.9 && LiPoVoltage <= 4.65){
+      batteryInfo = "High";
+    } else 
+    if(LiPoVoltage > 3.65 && LiPoVoltage <= 3.9){
+      batteryInfo = "Medium";
+    } else 
+    if(LiPoVoltage <= 3.65){
+      batteryInfo = "Low";
+    }
     
+    matrix.clear();
+    matrix.setTextColor(colors[0]);
+    matrix.setCursor(0, yTextOffset);
+    matrix.print(batteryInfo);
+    matrix.show();
+
+     } else if (btn == buttonA) {
+       Serial.print("tap3");
+     
+       if(pin3clicked == false){ 
+         savedBrightness = matrix.getBrightness();
+         pin3clicked = true;
+         pin3canceled = false;
+         for (size_t i = savedBrightness; i > 0 ; i-=1)
+          {
+            matrix.setBrightness(i);
+            delay(3);
+            matrix.show();
+         }
+         matrix.setBrightness(1);
+       }
+       else{
+         pin3clicked = false;
+         pin3canceled = false;
+         for (size_t i = 1; i < savedBrightness; i+=1)
+         {
+           matrix.setBrightness(i);
+           delay(3);
+           matrix.show();
+         }
+         matrix.setBrightness(savedBrightness);
+         pin3canceled = true;
+     }
+    
+  }
 }
 
 
