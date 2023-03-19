@@ -1,0 +1,6 @@
+# ESP-IDF Partition Table
+# Name,         Type, SubType, Offset,    Size,       Flags
+nvs,            data, nvs,     0x9000,    0x5000,
+spiffs,         data, spiffs,  0xe000,    0x80000,
+main_fw,        app,  factory, 0x180000,  0x130000,
+WLED_fw,        app,  test,    0x2B0000,  0x180000,
