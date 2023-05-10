@@ -12,7 +12,7 @@ curl -s https://api.github.com/repos/Aircoookie/WLED/releases/latest \
 | tr -d \" \
 | wget -O $WLED_FW_PATH -i -
 
-# 352 = 0x160 - exact number of 4096b blocks in 0x80000 flash area
+# 176 = 0x160 - exact number of 4096b blocks in 0x80000 flash area
 littlefs_create -i $PIO_BIN_DIR/littlefs.bin -c 176 -s data
 
 esptool.py -t --chip ESP32 merge_bin -o release.bin --flash_mode dio --flash_size 4MB \

@@ -1,7 +1,7 @@
 
 
 
-PIO_BIN_DIR=.pio/build/cyberbadge_fw/
+PIO_BIN_DIR=.pio/build/cyberbadge_mid/
 WLED_FW_PATH=$PIO_BIN_DIR/WLED_FW.bin
 
 
