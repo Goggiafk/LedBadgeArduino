@@ -27,8 +27,7 @@ char defChar = '`';
 String text = "";
 String scrollTextIn = "";
 
-
-Adafruit_NeoMatrix matrix = Adafruit_NeoMatrix(
+Adafruit_NeoMatrix wsMatrix = Adafruit_NeoMatrix(
     32, 8, PIN_WS2812,
     NEO_MATRIX_TOP + NEO_MATRIX_LEFT +
     NEO_MATRIX_COLUMNS + NEO_MATRIX_ZIGZAG,
@@ -36,32 +35,43 @@ Adafruit_NeoMatrix matrix = Adafruit_NeoMatrix(
 
 BluetoothSerial SerialBT;
 
-
 const uint16_t colors[] = {
-    matrix.Color(255, 255, 0), matrix.Color(255, 255, 0), matrix.Color(0, 0, 255), matrix.Color(255, 255, 255), matrix.Color(255, 0, 255)};
+    wsMatrix.Color(255, 255, 0),
+    wsMatrix.Color(255, 255, 0),
+    wsMatrix.Color(0, 0, 255),
+    wsMatrix.Color(255, 255, 255),
+    wsMatrix.Color(255, 0, 255)
+};
 
-uint16_t matrixMap[8][32];
-
-
+GFXcanvas16 canvas = GFXcanvas16(32, 8);
 
 void init_matrixBackend()
 {
-    matrix.begin();
-    matrix.setTextWrap(true);
-    matrix.setBrightness(20);
-    matrix.setTextColor(colors[2]);
-    delay(50);
 
-    matrix.clear();
-    matrix.setFont(&CyberFont__1_8pt7b);
-    matrix.fillScreen(0);
-    matrix.setCursor(xTextOffset, yTextOffset);
-    matrix.show();
+    //initialize the WS canvas
+    wsMatrix.begin();
+    wsMatrix.clear();
+    wsMatrix.setBrightness(20);
+    wsMatrix.fillScreen(0);
+    wsMatrix.show();
+
+    //initialize the canvas object
+    canvas.fillScreen(0);
+    canvas.setFont(&CyberFont__1_8pt7b);
+    canvas.setCursor(xTextOffset, yTextOffset);
+}
+
+uint16_t doubleBuffer[32][8];
+
+void draw_matrixBackend(){
+    wsMatrix.clear();
+    memcpy(doubleBuffer, canvas.getBuffer(), sizeof(doubleBuffer));
+    wsMatrix.drawRGBBitmap(0, 0, (uint16_t*)doubleBuffer, 32, 8);
+    wsMatrix.show();
 }
 
 void bleMatrixInit()
 {
-    // SerialBT.begin(9600);
     char badge_id[23];
     snprintf(badge_id, 11, "Badge-%llX", ESP.getEfuseMac());  
     SerialBT.begin(badge_id, false);
@@ -81,12 +91,12 @@ void LoadNewText()
     shouldBeStatic = true;
     isAnim = false;
     isPartyMode = false;
-    matrix.clear();
-    matrix.setTextWrap(true);
-    matrix.setCursor(xTextOffset, yTextOffset);
+    canvas.fillScreen(0);
+    canvas.setTextWrap(true);
+    canvas.setCursor(xTextOffset, yTextOffset);
     text = SerialBT.readStringUntil(defChar);
-    matrix.print(text);
-    matrix.show();
+    canvas.print(text);
+    //canvas.show();
     if (SerialBT.available())
     {
         ExecuteCommand();
@@ -101,14 +111,14 @@ void AddNewText()
     isPartyMode = false;
     text = "";
     text = SerialBT.readStringUntil(defChar);
-    matrix.print(text);
-    matrix.show();
+    canvas.print(text);
+    //canvas.show();
 }
 
 void ChangePower()
 {
-    matrix.setBrightness(atoi(SerialBT.readStringUntil(defChar).c_str()));
-    matrix.show();
+    wsMatrix.setBrightness(atoi(SerialBT.readStringUntil(defChar).c_str()));
+    //canvas.show();
     if (SerialBT.available())
     {
         ExecuteCommand();
@@ -178,22 +188,22 @@ void SetAlign()
     {
         if (arg == "0")
         {
-            if (xTextOffset < matrix.width() - 5)
+            if (xTextOffset < canvas.width() - 5)
                 xTextOffset++;
         }
         if (arg == "1")
         {
-            if (xTextOffset > -matrix.width() + 5)
+            if (xTextOffset > -canvas.width() + 5)
                 xTextOffset--;
         }
         if (arg == "2")
         {
             xTextOffset = 0;
         }
-        matrix.setCursor(xTextOffset, yTextOffset);
-        matrix.clear();
-        matrix.print(text);
-        matrix.show();
+        canvas.setCursor(xTextOffset, yTextOffset);
+        canvas.fillScreen(0);
+        canvas.print(text);
+        //canvas.show();
     }
 }
 
@@ -208,19 +218,19 @@ void SetScrollAlign()
 }
 
 int line_pass = 0;
-int x = matrix.width();
+int x = canvas.width();
 
 void ScrollText()
 {
-    matrix.clear();
+    canvas.fillScreen(0);
     scrollTextIn = SerialBT.readStringUntil(defChar);
     shouldBeStatic = true;
-    matrix.print(scrollTextIn);
+    canvas.print(scrollTextIn);
     shouldBeStatic = false;
     isAnim = false;
     isPartyMode = false;
-    matrix.setTextWrap(false);
-    matrix.show();
+    canvas.setTextWrap(false);
+    //canvas.show();
     // SerialBT.flush();
     if (SerialBT.available())
     {
@@ -233,9 +243,9 @@ void SetTextColor()
     int r = atoi(SerialBT.readStringUntil(defChar).c_str());
     int g = atoi(SerialBT.readStringUntil(defChar).c_str());
     int b = atoi(SerialBT.readStringUntil(defChar).c_str());
-    matrix.setTextColor(matrix.Color(r, g, b));
-    matrix.print(text);
-    matrix.show();
+    canvas.setTextColor(wsMatrix.Color(r, g, b));
+    canvas.print(text);
+    //canvas.show();
     if (SerialBT.available())
     {
         ExecuteCommand();
@@ -253,8 +263,8 @@ paint:
     char draw[20];
     snprintf(draw, 20, "#%02x%02x%2x @ %d/%d",r, g, b, xPosition, yPosition );
     Serial.println(draw);
-    matrix.drawPixel(xPosition, yPosition, matrix.Color(r, g, b));
-    matrix.show();
+    canvas.drawPixel(xPosition, yPosition, wsMatrix.Color(r, g, b));
+    //canvas.show();
 
     if (SerialBT.readStringUntil(defChar) == "pp")
         goto paint;
@@ -274,18 +284,11 @@ char loadedMap[maxPixels] = {0};
 
 void SaveDrawLoad()
 {
-    for (size_t i = 0; i < matrix.width(); i++)
-    {
-        for (size_t j = 0; j < matrix.height(); j++)
-        {
-            matrixMap[j][i] = matrix.Color(0, 0, 0);
-        }
-    }
-    matrix.clear();
+    canvas.fillScreen(0);
 
-    for (int i = 0; i < matrix.width(); i++)
+    for (int i = 0; i < canvas.width(); i++)
     {
-        for (int j = 0; j < matrix.height(); j++)
+        for (int j = 0; j < canvas.height(); j++)
         {
             int x = atoi(SerialBT.readStringUntil(defChar).c_str());
             delay(5);
@@ -296,15 +299,13 @@ void SaveDrawLoad()
             int g = atoi(SerialBT.readStringUntil(defChar).c_str());
             delay(5);
             int b = atoi(SerialBT.readStringUntil(defChar).c_str());
-
-            Serial.println(r);
-            Serial.println(g);
-            Serial.println(b);
-            Serial.println(" ");
-            // matrixMap[x][y] = matrix.Color(r, g, b);
-            matrix.drawPixel(x, y, matrix.Color(r, g, b));
+    
+            char draw[20];
+            snprintf(draw, 20, "#%02x%02x%2x",r, g, b);
+            Serial.println(draw);
+            canvas.drawPixel(x, y, wsMatrix.Color(r, g, b));
             delay(5);
-            matrix.show();
+            //canvas.show();
         }
     }
 }
@@ -323,8 +324,8 @@ void FillScreen()
     int r = atoi(SerialBT.readStringUntil(defChar).c_str());
     int g = atoi(SerialBT.readStringUntil(defChar).c_str());
     int b = atoi(SerialBT.readStringUntil(defChar).c_str());
-    matrix.fillScreen(matrix.Color(r, g, b));
-    matrix.show();
+    canvas.fillScreen(wsMatrix.Color(r, g, b));
+    //canvas.show();
 }
 
 void ExecuteCommand()
@@ -340,8 +341,8 @@ void ExecuteCommand()
         PaintPixels();
     if (command == "cl")
     {
-        matrix.clear();
-        matrix.show();
+        canvas.fillScreen(0);
+        //canvas.show();
         if (SerialBT.available())
         {
             ExecuteCommand();
@@ -402,10 +403,10 @@ void redrawNonStaticIfNeeded()
     if (shouldBeStatic){
         return;
     }
-    textLength = scrollTextIn.length() * 5 + matrix.width();
+    textLength = scrollTextIn.length() * 5 + canvas.width();
     int scrollLength = textLength;
     if (scrollAlign == 4)
-        scrollLength += matrix.width();
+        scrollLength += canvas.width();
     for (size_t i = 0; i < scrollLength; i++)
     {
         if (shouldBeStatic == false)
@@ -414,17 +415,17 @@ void redrawNonStaticIfNeeded()
             {
                 ExecuteCommand();
             }
-            matrix.fillScreen(0);
-            matrix.setCursor(x, yTextOffset);
-            matrix.print(scrollTextIn);
+            canvas.fillScreen(0);
+            canvas.setCursor(x, yTextOffset);
+            canvas.print(scrollTextIn);
             if (scrollAlign == 0) --x;
             if (scrollAlign == 4) ++x;
-            matrix.show();
+            //canvas.show();
             delay(scrollSpeed);
         } else break;
     }
     if (scrollAlign == 0) {
-        x = matrix.width();
+        x = canvas.width();
     }
     if (scrollAlign == 4){
         x = -textLength;
@@ -438,9 +439,9 @@ bool pin3canceled = true;
 void drawBatteryText(){
     String text = getBatteryText(getVoltage());
 
-    matrix.clear();
-    matrix.setTextColor(colors[0]);
-    matrix.setCursor(0, yTextOffset);
-    matrix.print(text);
-    matrix.show();
+    canvas.fillScreen(0);
+    canvas.setTextColor(colors[0]);
+    canvas.setCursor(0, yTextOffset);
+    canvas.print(text);
+    //canvas.show();
 }

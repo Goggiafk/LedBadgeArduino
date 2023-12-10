@@ -22,22 +22,37 @@ Button2 buttonA, buttonB, buttonC;
 #endif
 
 
+void drawMatrix(void * parameter)
+{
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+    while (true)
+    {
+        // int time = millis();
+        draw_matrixBackend();
+        // Serial.println(millis() - time);
+        vTaskDelay(50 / portTICK_PERIOD_MS);
+    }
+}
+
 void setup()
 {
-  Serial.begin(115200);
-  
-  Serial.println("The device started, now you can pair it with bluetooth!");
-  
-  bleMatrixInit();
+    Serial.begin(115200);
+    
+    Serial.println("The device started, now you can pair it with bluetooth!");
+    
+    bleMatrixInit();
 
-  buttonA.begin(BUTTON_PIN_1);
-  buttonA.setTapHandler(tap);
+    buttonA.begin(BUTTON_PIN_1);
+    buttonA.setTapHandler(tap);
 
-  buttonB.begin(BUTTON_PIN_2);
-  buttonB.setTapHandler(tap);
+    buttonB.begin(BUTTON_PIN_2);
+    buttonB.setTapHandler(tap);
 
-  buttonC.begin(BUTTON_PIN_3);
-  buttonC.setTapHandler(tap);
+    buttonC.begin(BUTTON_PIN_3);
+    buttonC.setTapHandler(tap);
+
+    xTaskCreatePinnedToCore( drawMatrix, "drawMatrix",
+        2048, NULL, 31, NULL , 1);
 }
 
 
@@ -58,12 +73,13 @@ void tap(Button2 &btn)
 
 void loop()
 {
-  bleMatrixLoop();
-    
-  buttonA.loop();
-  buttonB.loop();
-  buttonC.loop();
+    bleMatrixLoop();
+        
+    buttonA.loop();
+    buttonB.loop();
+    buttonC.loop();
 
-  updateBattery();
+    updateBattery();
+    // draw_matrixBackend();
 }
 

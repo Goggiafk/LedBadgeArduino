@@ -16,3 +16,11 @@ build_flags = ${common.build_flags_esp32}
    -D LEDPIN=22
 
 ```
+
+
+## Redrawing led matrix
+
+* Arduino pinned to core0
+* Drawing task pinned to core1
+* Double buffering done in code
+* Watchdog for core0 disabled until bluetooth is refactored

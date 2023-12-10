@@ -11,3 +11,4 @@ void bleMatrixLoop();
 void drawBatteryText();
 
 void bleMatrixInit();
+void draw_matrixBackend();
