@@ -28,7 +28,7 @@ void drawMatrix(void * parameter)
     while (true)
     {
         // int time = millis();
-        draw_matrixBackend();
+        bleMatrixRedraw();
         // Serial.println(millis() - time);
         vTaskDelay(50 / portTICK_PERIOD_MS);
     }
@@ -40,6 +40,7 @@ void setup()
     
     Serial.println("The device started, now you can pair it with bluetooth!");
     
+    delay(2000);
     bleMatrixInit();
 
     buttonA.begin(BUTTON_PIN_1);
@@ -52,7 +53,7 @@ void setup()
     buttonC.setTapHandler(tap);
 
     xTaskCreatePinnedToCore( drawMatrix, "drawMatrix",
-        2048, NULL, 31, NULL , 1);
+        4096, NULL, 31, NULL , 1);
 }
 
 

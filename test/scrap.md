@@ -24,3 +24,26 @@ if (pin3clicked == false)
             matrix.setBrightness(savedBrightness);
             pin3canceled = true;
         }
+
+
+           void initialize(){};
+    void redraw(){};
+    void fillScreen(uint16_t color){};
+    void print(const char* text){};
+    void print(String& text){};
+    void setCursor(int16_t x, int16_t y){};
+    void setTextWrap(bool wrap){};
+    void show(){};
+    void drawRGBBitmap(int16_t x, int16_t y, uint16_t *bitmap, int16_t w, int16_t h){};
+    void setBrightness(uint8_t){};
+    void clear(){};
+    void setFont(const GFXfont *f = NULL){};
+    void attachNeomatrixFrontend(Adafruit_NeoMatrix* frontend){};
+    void initNeoMatrix(){};
+    void attachSerialFrontend(std::function<void(const char*)> frontend){};
+    void renderDoubleBuffer(){};
+    void drawPixel(int16_t x, int16_t y, uint16_t color){};
+    int width(){return 0;};
+    int height(){return 0;};
+    uint16_t* getBuffer(){return NULL;};
+    void setTextColor(uint16_t color){};

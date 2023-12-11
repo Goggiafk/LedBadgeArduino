@@ -7,6 +7,7 @@
 #include "battHandler.h"
 #include "pinDefs.h"
 #include "blematrix.h"
+#include "uniMatrix.h"
 
 #include <CyberFont__1_8pt7b.h>
 
@@ -43,40 +44,19 @@ const uint16_t colors[] = {
     wsMatrix.Color(255, 0, 255)
 };
 
-GFXcanvas16 canvas = GFXcanvas16(32, 8);
-
-void init_matrixBackend()
-{
-
-    //initialize the WS canvas
-    wsMatrix.begin();
-    wsMatrix.clear();
-    wsMatrix.setBrightness(20);
-    wsMatrix.fillScreen(0);
-    wsMatrix.show();
-
-    //initialize the canvas object
-    canvas.fillScreen(0);
-    canvas.setFont(&CyberFont__1_8pt7b);
-    canvas.setCursor(xTextOffset, yTextOffset);
-}
-
-uint16_t doubleBuffer[32][8];
-
-void draw_matrixBackend(){
-    wsMatrix.clear();
-    memcpy(doubleBuffer, canvas.getBuffer(), sizeof(doubleBuffer));
-    wsMatrix.drawRGBBitmap(0, 0, (uint16_t*)doubleBuffer, 32, 8);
-    wsMatrix.show();
-}
+UniMatrix uniMatrix = UniMatrix(32, 8, &CyberFont__1_8pt7b);
 
 void bleMatrixInit()
 {
+    uniMatrix.initialize();
     char badge_id[23];
     snprintf(badge_id, 11, "Badge-%llX", ESP.getEfuseMac());  
     SerialBT.begin(badge_id, false);
 
-    init_matrixBackend();
+    uniMatrix.attachNeomatrixFrontend(&wsMatrix);
+    uniMatrix.attachSerialFrontend([](const char* msg) {
+        Serial.println(msg);
+    });
 }
 
 void bleMatrixLoop(){
@@ -86,17 +66,21 @@ void bleMatrixLoop(){
     redrawNonStaticIfNeeded();
 }
 
+void bleMatrixRedraw(){
+    uniMatrix.redraw();
+}
+
 void LoadNewText()
 {
     shouldBeStatic = true;
     isAnim = false;
     isPartyMode = false;
-    canvas.fillScreen(0);
-    canvas.setTextWrap(true);
-    canvas.setCursor(xTextOffset, yTextOffset);
+    uniMatrix.fillScreen(0);
+    uniMatrix.setTextWrap(true);
+    uniMatrix.setCursor(xTextOffset, yTextOffset);
     text = SerialBT.readStringUntil(defChar);
-    canvas.print(text);
-    //canvas.show();
+    uniMatrix.print(text);
+    //uniMatrix.show();
     if (SerialBT.available())
     {
         ExecuteCommand();
@@ -111,14 +95,14 @@ void AddNewText()
     isPartyMode = false;
     text = "";
     text = SerialBT.readStringUntil(defChar);
-    canvas.print(text);
-    //canvas.show();
+    uniMatrix.print(text);
+    //uniMatrix.show();
 }
 
 void ChangePower()
 {
     wsMatrix.setBrightness(atoi(SerialBT.readStringUntil(defChar).c_str()));
-    //canvas.show();
+    //uniMatrix.show();
     if (SerialBT.available())
     {
         ExecuteCommand();
@@ -188,22 +172,22 @@ void SetAlign()
     {
         if (arg == "0")
         {
-            if (xTextOffset < canvas.width() - 5)
+            if (xTextOffset < uniMatrix.width() - 5)
                 xTextOffset++;
         }
         if (arg == "1")
         {
-            if (xTextOffset > -canvas.width() + 5)
+            if (xTextOffset > -uniMatrix.width() + 5)
                 xTextOffset--;
         }
         if (arg == "2")
         {
             xTextOffset = 0;
         }
-        canvas.setCursor(xTextOffset, yTextOffset);
-        canvas.fillScreen(0);
-        canvas.print(text);
-        //canvas.show();
+        uniMatrix.setCursor(xTextOffset, yTextOffset);
+        uniMatrix.fillScreen(0);
+        uniMatrix.print(text);
+        //uniMatrix.show();
     }
 }
 
@@ -218,19 +202,19 @@ void SetScrollAlign()
 }
 
 int line_pass = 0;
-int x = canvas.width();
+int x = uniMatrix.width();
 
 void ScrollText()
 {
-    canvas.fillScreen(0);
+    uniMatrix.fillScreen(0);
     scrollTextIn = SerialBT.readStringUntil(defChar);
     shouldBeStatic = true;
-    canvas.print(scrollTextIn);
+    uniMatrix.print(scrollTextIn);
     shouldBeStatic = false;
     isAnim = false;
     isPartyMode = false;
-    canvas.setTextWrap(false);
-    //canvas.show();
+    uniMatrix.setTextWrap(false);
+    //uniMatrix.show();
     // SerialBT.flush();
     if (SerialBT.available())
     {
@@ -243,9 +227,9 @@ void SetTextColor()
     int r = atoi(SerialBT.readStringUntil(defChar).c_str());
     int g = atoi(SerialBT.readStringUntil(defChar).c_str());
     int b = atoi(SerialBT.readStringUntil(defChar).c_str());
-    canvas.setTextColor(wsMatrix.Color(r, g, b));
-    canvas.print(text);
-    //canvas.show();
+    uniMatrix.setTextColor(wsMatrix.Color(r, g, b));
+    uniMatrix.print(text);
+    //uniMatrix.show();
     if (SerialBT.available())
     {
         ExecuteCommand();
@@ -263,8 +247,8 @@ paint:
     char draw[20];
     snprintf(draw, 20, "#%02x%02x%2x @ %d/%d",r, g, b, xPosition, yPosition );
     Serial.println(draw);
-    canvas.drawPixel(xPosition, yPosition, wsMatrix.Color(r, g, b));
-    //canvas.show();
+    uniMatrix.drawPixel(xPosition, yPosition, wsMatrix.Color(r, g, b));
+    //uniMatrix.show();
 
     if (SerialBT.readStringUntil(defChar) == "pp")
         goto paint;
@@ -284,11 +268,11 @@ char loadedMap[maxPixels] = {0};
 
 void SaveDrawLoad()
 {
-    canvas.fillScreen(0);
+    uniMatrix.fillScreen(0);
 
-    for (int i = 0; i < canvas.width(); i++)
+    for (int i = 0; i < uniMatrix.width(); i++)
     {
-        for (int j = 0; j < canvas.height(); j++)
+        for (int j = 0; j < uniMatrix.height(); j++)
         {
             int x = atoi(SerialBT.readStringUntil(defChar).c_str());
             delay(5);
@@ -303,9 +287,9 @@ void SaveDrawLoad()
             char draw[20];
             snprintf(draw, 20, "#%02x%02x%2x",r, g, b);
             Serial.println(draw);
-            canvas.drawPixel(x, y, wsMatrix.Color(r, g, b));
+            uniMatrix.drawPixel(x, y, wsMatrix.Color(r, g, b));
             delay(5);
-            //canvas.show();
+            //uniMatrix.show();
         }
     }
 }
@@ -324,8 +308,8 @@ void FillScreen()
     int r = atoi(SerialBT.readStringUntil(defChar).c_str());
     int g = atoi(SerialBT.readStringUntil(defChar).c_str());
     int b = atoi(SerialBT.readStringUntil(defChar).c_str());
-    canvas.fillScreen(wsMatrix.Color(r, g, b));
-    //canvas.show();
+    uniMatrix.fillScreen(wsMatrix.Color(r, g, b));
+    //uniMatrix.show();
 }
 
 void ExecuteCommand()
@@ -341,8 +325,8 @@ void ExecuteCommand()
         PaintPixels();
     if (command == "cl")
     {
-        canvas.fillScreen(0);
-        //canvas.show();
+        uniMatrix.fillScreen(0);
+        //uniMatrix.show();
         if (SerialBT.available())
         {
             ExecuteCommand();
@@ -403,10 +387,10 @@ void redrawNonStaticIfNeeded()
     if (shouldBeStatic){
         return;
     }
-    textLength = scrollTextIn.length() * 5 + canvas.width();
+    textLength = scrollTextIn.length() * 5 + uniMatrix.width();
     int scrollLength = textLength;
     if (scrollAlign == 4)
-        scrollLength += canvas.width();
+        scrollLength += uniMatrix.width();
     for (size_t i = 0; i < scrollLength; i++)
     {
         if (shouldBeStatic == false)
@@ -415,17 +399,17 @@ void redrawNonStaticIfNeeded()
             {
                 ExecuteCommand();
             }
-            canvas.fillScreen(0);
-            canvas.setCursor(x, yTextOffset);
-            canvas.print(scrollTextIn);
+            uniMatrix.fillScreen(0);
+            uniMatrix.setCursor(x, yTextOffset);
+            uniMatrix.print(scrollTextIn);
             if (scrollAlign == 0) --x;
             if (scrollAlign == 4) ++x;
-            //canvas.show();
+            //uniMatrix.show();
             delay(scrollSpeed);
         } else break;
     }
     if (scrollAlign == 0) {
-        x = canvas.width();
+        x = uniMatrix.width();
     }
     if (scrollAlign == 4){
         x = -textLength;
@@ -439,9 +423,9 @@ bool pin3canceled = true;
 void drawBatteryText(){
     String text = getBatteryText(getVoltage());
 
-    canvas.fillScreen(0);
-    canvas.setTextColor(colors[0]);
-    canvas.setCursor(0, yTextOffset);
-    canvas.print(text);
-    //canvas.show();
+    uniMatrix.fillScreen(0);
+    uniMatrix.setTextColor(colors[0]);
+    uniMatrix.setCursor(0, yTextOffset);
+    uniMatrix.print(text);
+    //uniMatrix.show();
 }
