@@ -1,6 +1,6 @@
 
 
-
+#pragma once
 
 const int BUTTON_PIN_1 = 0;
 const int BUTTON_PIN_2 = 26;

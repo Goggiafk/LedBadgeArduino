@@ -2,11 +2,10 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_NeoMatrix.h>
 #include <Adafruit_NeoPixel.h>
-#include "Button2.h"
+#include <Button2.h>
 
-#include "blematrix.h"
+#include "bleMatrixDevice/bleMatrixDevice.h"
 #include "pinDefs.h"
-#include "battHandler.h"
 
 
 void tap(Button2& btn);
@@ -22,13 +21,15 @@ Button2 buttonA, buttonB, buttonC;
 #endif
 
 
+bleMatrixDevice1_0 deviceHAL(32,8, PIN_WS2812);
+
 void drawMatrix(void * parameter)
 {
     vTaskDelay(1000 / portTICK_PERIOD_MS);
     while (true)
     {
         // int time = millis();
-        bleMatrixRedraw();
+        deviceHAL.redraw();
         // Serial.println(millis() - time);
         vTaskDelay(50 / portTICK_PERIOD_MS);
     }
@@ -41,7 +42,7 @@ void setup()
     Serial.println("The device started, now you can pair it with bluetooth!");
     
     delay(2000);
-    bleMatrixInit();
+    deviceHAL.init();
 
     buttonA.begin(BUTTON_PIN_1);
     buttonA.setTapHandler(tap);
@@ -62,7 +63,7 @@ void tap(Button2 &btn)
     if (btn == buttonC)
     {
         Serial.print("tap1");
-        drawBatteryText();
+        deviceHAL.drawBattState();
     }
     else if (btn == buttonA)
     {
@@ -74,13 +75,10 @@ void tap(Button2 &btn)
 
 void loop()
 {
-    bleMatrixLoop();
+    deviceHAL.loop();
         
     buttonA.loop();
     buttonB.loop();
     buttonC.loop();
-
-    updateBattery();
-    // draw_matrixBackend();
 }
 

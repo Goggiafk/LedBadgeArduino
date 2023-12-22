@@ -62,28 +62,32 @@ public:
         }
 
         if (serialFrontendCb != NULL) {
-            renderDoubleBuffer();
+            serialRender();
         }
     }
 
-    void renderDoubleBuffer() {
+    void serialRender() {
         static int skip = 0;
-        if (skip++ % 50 != 0) {
-            return;
-        }
+        if (skip++ % 50 != 0) { return; }
         std::stringstream ss;
         for (int y = 0; y < height(); y++) {
             ss << "| ";
             for (int x = 0; x < width(); x++) {
-                if (doubleBuffer[y * width() + x] == 0) {
-                    ss << ". ";
-                } else {
-                    ss << "# ";
-                }
+                if (doubleBuffer[y * width() + x] == 0) { ss << ". ";}
+                else { ss << "# ";}
             }
             ss << "|\n";
         }
         serialFrontendCb(ss.str().c_str());        
+    }
+
+    void setTextColor(uint16_t c) {
+        GFXcanvas16::setTextColor(c);
+    }
+
+    void setTextColor(uint8_t r, uint8_t g, uint8_t b) {
+        uint16_t color = ((uint16_t)(r & 0xF8) << 8) | ((uint16_t)(g & 0xFC) << 3) | (b >> 3);
+        GFXcanvas16::setTextColor(color);
     }
 
     int w,h;

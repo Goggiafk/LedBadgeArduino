@@ -41,9 +41,18 @@ if (pin3clicked == false)
     void attachNeomatrixFrontend(Adafruit_NeoMatrix* frontend){};
     void initNeoMatrix(){};
     void attachSerialFrontend(std::function<void(const char*)> frontend){};
-    void renderDoubleBuffer(){};
+    void serialRender(){};
     void drawPixel(int16_t x, int16_t y, uint16_t color){};
     int width(){return 0;};
     int height(){return 0;};
     uint16_t* getBuffer(){return NULL;};
     void setTextColor(uint16_t color){};
+
+
+    const uint16_t colors[] = {
+    wsMatrix.Color(255, 255, 0),
+    wsMatrix.Color(255, 255, 0),
+    wsMatrix.Color(0, 0, 255),
+    wsMatrix.Color(255, 255, 255),
+    wsMatrix.Color(255, 0, 255)
+};
