@@ -26,5 +26,5 @@ class bleMatrixDevice
 #ifdef CBADGE_BT_CLASSIC
     #include "bleMatrixDevice/bleMatrixDevice1_0.h"
 #else
-    // #include "bleMatrixDevice1_1.h"
+    #include "bleMatrixDevice/bleMatrixDevice2_0.h"
 #endif

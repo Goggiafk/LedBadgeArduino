@@ -12,16 +12,13 @@ void tap(Button2& btn);
 
 Button2 buttonA, buttonB, buttonC;
 
-#if !defined(CONFIG_BT_ENABLED) || !defined(CONFIG_BLUEDROID_ENABLED)
-#error Bluetooth is not enabled! Please run `make menuconfig` to and enable it
+#ifdef CBADGE_BT_CLASSIC
+    bleMatrixDevice1_0 deviceHAL(32,8, PIN_WS2812);
+#else
+    bleMatrixDevice2_0 deviceHAL(32,8, PIN_WS2812);
 #endif
 
-#if !defined(CONFIG_BT_SPP_ENABLED)
-#error Serial Bluetooth not available or not enabled. It is only available for the ESP32 chip.
-#endif
 
-
-bleMatrixDevice1_0 deviceHAL(32,8, PIN_WS2812);
 
 void drawMatrix(void * parameter)
 {
